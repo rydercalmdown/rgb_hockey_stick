@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Hockey Stick</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <style>
+      body {
+        background: radial-gradient(1200px 500px at 20% 0%, rgba(13, 110, 253, 0.18), transparent 55%),
+          radial-gradient(900px 450px at 80% 10%, rgba(111, 66, 193, 0.18), transparent 50%), #0b1220;
+      }
+      .app-card {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(8px);
+      }
+      .muted {
+        color: rgba(255, 255, 255, 0.75);
+      }
+    </style>
+  </head>
+  <body class="text-white">
+    <div class="container py-4 py-md-5" style="max-width: 860px">
+      <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+        <div>
+          <div class="h2 mb-1">Hockey Stick</div>
+          <div class="muted small">
+            Created by Ryder Calm Down —
+            <a
+              class="link-light link-underline-opacity-25 link-underline-opacity-100-hover"
+              href="https://rydercalmdown.com"
+              target="_blank"
+              rel="noopener"
+              >rydercalmdown.com</a
+            >
+          </div>
+        </div>
+        <div class="text-end">
+          <div class="badge text-bg-dark border border-light-subtle">IP {{IP}}</div>
+          <div class="muted small mt-1">
+            Mode: <span id="modeLabel">{{MODE_LABEL}}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+        <div id="toastContainer" class="toast-container"></div>
+      </div>
+
+      <ul class="nav nav-pills gap-2 mb-3" id="modeTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active"
+            id="tab-auto"
+            data-bs-toggle="pill"
+            data-bs-target="#pane-auto"
+            type="button"
+            role="tab"
+            aria-controls="pane-auto"
+            aria-selected="true"
+          >
+            Automatic control
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="tab-manual"
+            data-bs-toggle="pill"
+            data-bs-target="#pane-manual"
+            type="button"
+            role="tab"
+            aria-controls="pane-manual"
+            aria-selected="false"
+          >
+            Manual control
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content" id="modeTabContent">
+        <div
+          class="tab-pane fade show active"
+          id="pane-auto"
+          role="tabpanel"
+          aria-labelledby="tab-auto"
+          tabindex="0"
+        >
+          <div class="row g-3">
+            <div class="col-12 col-lg-6">
+              <div class="card app-card shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="card-title mb-0">Team</h5>
+                    <span class="badge text-bg-primary" id="currentTeamBadge">{{SELECTED_TEAM}}</span>
+                  </div>
+                  <div class="muted small mb-3">Used for the live-game glow and goal flash.</div>
+                  <form id="teamForm" class="d-flex gap-2 align-items-center" autocomplete="off">
+                    <select class="form-select" name="team" id="teamSelect" aria-label="Select team">
+                      {{TEAM_OPTIONS}}
+                    </select>
+                    <button type="submit" class="btn btn-primary flex-shrink-0">Save</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <div class="card app-card shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="card-title mb-0">Brightness</h5>
+                    <span class="badge text-bg-dark border border-light-subtle"
+                      ><span id="brightnessValue">{{BRIGHTNESS}}</span> / 255</span
+                    >
+                  </div>
+                  <div class="muted small mb-3">Master brightness affects all animations.</div>
+                  <input
+                    class="form-range"
+                    type="range"
+                    id="brightnessSlider"
+                    min="1"
+                    max="255"
+                    value="{{BRIGHTNESS}}"
+                    aria-label="Brightness slider"
+                  />
+                  <div class="d-flex justify-content-between muted small">
+                    <span>1</span><span id="brightnessPercent">{{BRIGHTNESS_PERCENT}}%</span><span>255</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="card app-card shadow-sm">
+                <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+                  <div>
+                    <div class="fw-semibold">Automatic control</div>
+                    <div class="muted small">Uses the NHL API and triggers goal flashes automatically.</div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-outline-light"
+                    data-endpoint="/lightauto"
+                    data-toast="Automatic control enabled"
+                  >
+                    Enable automatic
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="pane-manual" role="tabpanel" aria-labelledby="tab-manual" tabindex="0">
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="card app-card shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="card-title mb-0">Manual control</h5>
+                    <span class="badge text-bg-secondary">Overrides automatic</span>
+                  </div>
+                  <div class="muted small mb-3">
+                    Turn lights on/off, flash, or wave. Choose team colors or 3 custom colors.
+                  </div>
+
+                  <div class="d-flex flex-wrap gap-2 mb-3">
+                    <button type="button" class="btn btn-success" data-endpoint="/manualonteams" data-toast="Manual ON (team colors)">
+                      On (Team)
+                    </button>
+                    <button type="button" class="btn btn-success" data-endpoint="/manualoncustom" data-toast="Manual ON (custom colors)">
+                      On (Custom)
+                    </button>
+                    <button type="button" class="btn btn-danger" data-endpoint="/lightoff" data-toast="Lights OFF">Off</button>
+                    <button type="button" class="btn btn-warning" data-endpoint="/lightflash" data-toast="Manual flash started">
+                      Flash
+                    </button>
+                    <button type="button" class="btn btn-info" data-endpoint="/lightwave" data-toast="Wave started">Wave</button>
+                    <button type="button" class="btn btn-outline-light" data-endpoint="/lightauto" data-toast="Automatic control enabled">
+                      Back to automatic
+                    </button>
+                  </div>
+
+                  <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="muted small">Palette:</span>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Palette source">
+                      <button type="button" class="btn btn-outline-light" id="paletteTeamBtn" data-endpoint="/useTeamColors" data-toast="Using team colors">
+                        Team
+                      </button>
+                      <button type="button" class="btn btn-outline-light" id="paletteCustomBtn" data-endpoint="/useCustomColors" data-toast="Using custom colors">
+                        Custom
+                      </button>
+                    </div>
+                  </div>
+
+                  <form id="manualColorsForm" class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                      <label class="form-label muted small mb-1">Color 1</label>
+                      <input class="form-control form-control-color w-100" type="color" id="c1" value="{{C1}}" title="Pick color 1" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                      <label class="form-label muted small mb-1">Color 2</label>
+                      <input class="form-control form-control-color w-100" type="color" id="c2" value="{{C2}}" title="Pick color 2" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                      <label class="form-label muted small mb-1">Color 3</label>
+                      <input class="form-control form-control-color w-100" type="color" id="c3" value="{{C3}}" title="Pick color 3" />
+                    </div>
+                    <div class="col-12 d-flex gap-2">
+                      <button type="submit" class="btn btn-primary">Save custom colors</button>
+                      <div class="muted small align-self-center">
+                        Saved colors are used for Custom ON / Wave / Flash when palette is Custom.
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"]/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+        });
+      }
+      function showToast(message, variant) {
+        variant = variant || "dark";
+        var el = document.createElement("div");
+        el.className = "toast align-items-center text-bg-" + variant + " border-0";
+        el.setAttribute("role", "status");
+        el.setAttribute("aria-live", "polite");
+        el.setAttribute("aria-atomic", "true");
+        el.innerHTML =
+          "<div class='d-flex'><div class='toast-body'>" +
+          escapeHtml(message) +
+          "</div><button type='button' class='btn-close btn-close-white me-2 m-auto' data-bs-dismiss='toast' aria-label='Close'></button></div>";
+        document.getElementById("toastContainer").appendChild(el);
+        var t = new bootstrap.Toast(el, { delay: 2500 });
+        t.show();
+        el.addEventListener("hidden.bs.toast", function () {
+          el.remove();
+        });
+      }
+      async function hit(endpoint, okMsg) {
+        try {
+          var r = await fetch(endpoint, { cache: "no-store" });
+          if (!r.ok) {
+            throw new Error(await r.text());
+          }
+          showToast(okMsg || "OK", "success");
+        } catch (e) {
+          showToast(e && e.message ? e.message : "Request failed", "danger");
+        }
+      }
+      document.addEventListener("click", function (ev) {
+        var b = ev.target.closest("button[data-endpoint]");
+        if (!b) return;
+        hit(b.getAttribute("data-endpoint"), b.getAttribute("data-toast") || "Done");
+      });
+
+      document.getElementById("teamForm").addEventListener("submit", async function (ev) {
+        ev.preventDefault();
+        var sel = document.getElementById("teamSelect");
+        var team = sel.value;
+        try {
+          var r = await fetch("/setteam?team=" + encodeURIComponent(team), { cache: "no-store" });
+          var txt = await r.text();
+          if (!r.ok) throw new Error(txt || "Invalid team");
+          document.getElementById("currentTeamBadge").textContent = team;
+          showToast("Team set to " + team, "success");
+        } catch (e) {
+          showToast(e && e.message ? e.message : "Failed to set team", "danger");
+        }
+      });
+
+      var bs = document.getElementById("brightnessSlider");
+      var bv = document.getElementById("brightnessValue");
+      var bp = document.getElementById("brightnessPercent");
+      var lastSent = null;
+      var debounce = null;
+      function updateBrightnessUI(v) {
+        bv.textContent = v;
+        bp.textContent = Math.round((v * 100) / 255) + "%";
+      }
+      updateBrightnessUI(bs.value);
+      bs.addEventListener("input", function () {
+        updateBrightnessUI(this.value);
+        if (debounce) clearTimeout(debounce);
+        var v = this.value;
+        debounce = setTimeout(async function () {
+          if (v === lastSent) return;
+          lastSent = v;
+          try {
+            var r = await fetch("/setbrightness?brightness=" + encodeURIComponent(v), { cache: "no-store" });
+            if (!r.ok) throw new Error(await r.text());
+          } catch (e) {
+            showToast(e && e.message ? e.message : "Failed to set brightness", "danger");
+          }
+        }, 200);
+      });
+
+      var useCustom = {{MANUAL_USE_CUSTOM}};
+      function syncPaletteButtons() {
+        var t = document.getElementById("paletteTeamBtn");
+        var c = document.getElementById("paletteCustomBtn");
+        if (!t || !c) return;
+        if (useCustom) {
+          c.classList.add("active");
+          t.classList.remove("active");
+        } else {
+          t.classList.add("active");
+          c.classList.remove("active");
+        }
+      }
+      syncPaletteButtons();
+
+      document.getElementById("paletteTeamBtn")?.addEventListener("click", function () {
+        useCustom = false;
+        syncPaletteButtons();
+        document.getElementById("modeLabel").textContent = "Manual";
+      });
+      document.getElementById("paletteCustomBtn")?.addEventListener("click", function () {
+        useCustom = true;
+        syncPaletteButtons();
+        document.getElementById("modeLabel").textContent = "Manual";
+      });
+
+      document.getElementById("manualColorsForm")?.addEventListener("submit", async function (ev) {
+        ev.preventDefault();
+        var c1 = document.getElementById("c1").value;
+        var c2 = document.getElementById("c2").value;
+        var c3 = document.getElementById("c3").value;
+        try {
+          var r = await fetch(
+            "/setmanualcolors?c1=" +
+              encodeURIComponent(c1) +
+              "&c2=" +
+              encodeURIComponent(c2) +
+              "&c3=" +
+              encodeURIComponent(c3),
+            { cache: "no-store" }
+          );
+          var txt = await r.text();
+          if (!r.ok) throw new Error(txt || "Invalid colors");
+          useCustom = true;
+          syncPaletteButtons();
+          showToast("Custom colors saved", "success");
+        } catch (e) {
+          showToast(e && e.message ? e.message : "Failed to save colors", "danger");
+        }
+      });
+
+      document.getElementById("tab-auto")?.addEventListener("shown.bs.tab", function () {
+        document.getElementById("modeLabel").textContent = "Automatic";
+      });
+      document.getElementById("tab-manual")?.addEventListener("shown.bs.tab", function () {
+        document.getElementById("modeLabel").textContent = "Manual";
+      });
+    </script>
+  </body>
+</html>
+

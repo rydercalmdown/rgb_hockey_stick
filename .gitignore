@@ -1,0 +1,30 @@
+# Build output
+build/
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Arduino IDE
+*.hex
+*.elf
+*.bin
+
+# Temporary files
+*.tmp
+*.bak
+*.log
