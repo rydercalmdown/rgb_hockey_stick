@@ -1,114 +1,132 @@
-## Hockey Stick (ESP8266)
+# RGB Hockey Stick
 
-An ESP8266-based LED controller for a hockey stick that automatically responds to NHL game events and provides manual control modes.
+An ESP8266-based LED controller for a hockey stick. Two firmware options:
 
-### Features
+1. **Original firmware** — WiFi-connected, monitors the NHL API and reacts to live game events (goals, game start/end). Includes a web UI for manual control.
+2. **WLED firmware** — Runs [WLED](https://kno.wled.ge) on the stick and integrates with Home Assistant, so the stick can mirror any other light (color, brightness, on/off).
 
-- **Automatic Mode**: Monitors NHL API for your team's games and automatically:
-  - Displays team colors when a game is live
-  - Flashes team colors when your team scores a goal
-- **Manual Mode**: Full control over LED patterns:
-  - Turn lights on/off with team colors or custom colors
-  - Wave animations (team colors or custom 3-color palette)
-  - Flash animations
-  - Custom color picker (3 colors)
-- **Red/Black Wave**: Special endpoint for red/black wave animation
-- **Brightness Control**: Adjustable master brightness (1-255)
+---
 
-### Hardware
+## Hardware
 
 - ESP8266 (NodeMCU or similar)
 - WS2812B/NeoPixel LED strip (100 LEDs)
-- LED strip connected to GPIO 4 (D2 on NodeMCU)
+- LED data line on GPIO 4 (D2 on NodeMCU)
 
-### Configuration
+---
 
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
+## Setup
 
-2. Edit `.env` and set your WiFi credentials:
-   ```
-   WIFI_SSID=YourWiFiNetworkName
-   WIFI_PASSWORD=YourWiFiPassword
-   ```
+### 1. Configure WiFi
 
-The `.env` file is gitignored, so your credentials won't be committed to the repository.
-
-### Building
-
-1. **Configure WiFi** (see Configuration above) - ensure `.env` exists with your credentials
-2. **Edit the UI** (optional): modify `web/ui.html` to customize the web interface
-3. **Edit the template** (optional): modify `templates/hockey_stick.ino` to change the Arduino code
-4. **Build**: run `make build` to generate `build/hockey_stick.ino`
-   - The build process reads `.env` and injects WiFi credentials into the template
-   - Inlines the HTML from `web/ui.html` as a PROGMEM string
-   - Outputs a single self-contained `build/hockey_stick.ino` file
-5. **Upload**: drag `build/hockey_stick.ino` into Arduino IDE and upload to your ESP8266
-
-The build process:
-- Reads `web/ui.html` and `templates/hockey_stick.ino`
-- Replaces `{{WIFI_SSID}}` and `{{WIFI_PASSWORD}}` placeholders from `.env`
-- Inlines the HTML as a PROGMEM string (replaces `#include "web_ui.generated.h"`)
-- Outputs a single self-contained `build/hockey_stick.ino` file
-
-### Web Interface
-
-The ESP8266 serves a web interface at its IP address (printed to Serial on startup).
-
-**Two Modes:**
-
-1. **Automatic Control**: Set your team, brightness, and enable automatic mode. The stick will monitor NHL games and react automatically.
-
-2. **Manual Control**: 
-   - Control lights directly (On/Off/Flash/Wave)
-   - Choose between team colors or custom colors
-   - Set 3 custom colors for manual animations
-   - Wave and flash animations use the selected palette
-
-**Styling**: Uses Bootstrap 5 (loaded via CDN) with toast notifications instead of blocking alerts.
-
-### API Endpoints
-
-All endpoints accept GET requests (POST also works):
-
-- `/wave/on/` - Start red/black wave animation
-- `/wave/off/` - Stop red/black wave animation
-- `/lighton` - Turn lights on (team colors)
-- `/lightoff` - Turn lights off
-- `/lightflash` - Start flash animation
-- `/lightwave` - Start wave animation
-- `/lightauto` - Return to automatic mode
-- `/setteam?team=TOR` - Set team (3-letter abbreviation)
-- `/setbrightness?brightness=178` - Set brightness (1-255)
-- `/manualonteams` - Manual ON with team colors
-- `/manualoncustom` - Manual ON with custom colors
-- `/useTeamColors` - Use team colors for manual palette
-- `/useCustomColors` - Use custom colors for manual palette
-- `/setmanualcolors?c1=%23FF0000&c2=%2300FF00&c3=%230000FF` - Set custom colors (hex format)
-
-### Project Structure
-
-```
-hockey_stick/
-├── templates/
-│   └── hockey_stick.ino  # Template source file (with {{WIFI_SSID}} placeholders)
-├── web/
-│   └── ui.html           # Web UI source (HTML/CSS/JS)
-├── tools/
-│   └── build_web_ui.py   # Build script
-├── build/                # Generated output (gitignored)
-│   └── hockey_stick.ino # Ready-to-upload file
-├── .env                  # WiFi credentials (gitignored, create from .env.example)
-├── .env.example          # Example .env file
-├── Makefile              # Build configuration
-└── README.md             # This file
+```bash
+cp .env.example .env
 ```
 
-### Dependencies
+Edit `.env` with your WiFi credentials. This file is gitignored and never committed.
 
-Arduino libraries (install via Library Manager):
+### 2. Find your serial port
+
+Plug in the ESP8266 and check which port it appears on:
+
+```bash
+ls /dev/cu.*       # macOS
+ls /dev/ttyUSB*    # Linux
+```
+
+The default in the Makefile is `/dev/cu.SLAB_USBtoUART` (common for NodeMCU on macOS). Override it on any `make` command if yours differs:
+
+```bash
+make wled-flash FLASH_PORT=/dev/ttyUSB0
+```
+
+---
+
+## WLED + Home Assistant Integration
+
+Flashes [WLED](https://kno.wled.ge) onto the stick and wires it into Home Assistant so it mirrors another light automatically.
+
+### How it works
+
+```
+Hue bridge  →  Home Assistant  →  WLED (hockey stick)
+  (event stream, ~0.3s)    (automation, ~0.1s)
+```
+
+State changes (on/off, color, brightness) on the source light propagate to the stick in roughly half a second.
+
+### Flash WLED
+
+```bash
+make wled-flash
+```
+
+Downloads the WLED binary, flashes it, then provisions WiFi credentials from `.env` by temporarily joining the WLED access point.
+
+### Add to Home Assistant
+
+After flashing, the stick won't auto-discover in HA if it's on a separate VLAN. Add it manually:
+
+**Settings → Integrations → + Add Integration → WLED → enter the stick's IP**
+
+### Deploy the automation
+
+Edit `home_assistant/automations.yaml` to set your source light entity (the light you want the stick to follow), then deploy:
+
+```bash
+make deploy-ha HA_TOKEN=your_long_lived_token
+```
+
+Create a long-lived token at: **HA → Profile → Long-Lived Access Tokens**
+
+The included automation mirrors color and brightness. If your source light only supports on/off (e.g. a smart plug), simplify the action to just `light.turn_{{ trigger.to_state.state }}`.
+
+---
+
+## Original NHL Firmware
+
+Monitors the NHL API for live games and reacts automatically.
+
+### Features
+
+- **Automatic mode**: displays team colors during a live game, flashes on goals
+- **Manual mode**: on/off, wave, flash animations, custom 3-color palette
+- **Brightness control**: adjustable (1–255)
+- **Web UI**: served from the ESP8266 at its local IP
+
+### Build and flash
+
+```bash
+make build    # generates build/hockey_stick.ino
+```
+
+Then open `build/hockey_stick.ino` in Arduino IDE and upload to the ESP8266.
+
+### API endpoints
+
+All accept GET (POST also works):
+
+| Endpoint | Description |
+|---|---|
+| `/lighton` | Turn on (team colors) |
+| `/lightoff` | Turn off |
+| `/lightflash` | Flash animation |
+| `/lightwave` | Wave animation |
+| `/lightauto` | Return to automatic mode |
+| `/setteam?team=TOR` | Set team (3-letter abbreviation) |
+| `/setbrightness?brightness=178` | Set brightness (1–255) |
+| `/manualonteams` | Manual ON with team colors |
+| `/manualoncustom` | Manual ON with custom colors |
+| `/useTeamColors` | Use team colors for manual palette |
+| `/useCustomColors` | Use custom colors for manual palette |
+| `/setmanualcolors?c1=%23FF0000&c2=%2300FF00&c3=%230000FF` | Set custom colors (hex) |
+| `/wave/on/` | Start red/black wave |
+| `/wave/off/` | Stop red/black wave |
+
+### Arduino dependencies
+
+Install via Library Manager:
+
 - ESP8266WiFi
 - ESP8266WebServer
 - ESP8266HTTPClient
@@ -117,6 +135,46 @@ Arduino libraries (install via Library Manager):
 - Adafruit NeoPixel
 - EEPROM
 
-### License
+---
 
-Created by Ryder Calm Down — [rydercalmdown.com](https://rydercalmdown.com)
+## Project Structure
+
+```
+rgb_hockey_stick/
+├── templates/
+│   └── hockey_stick.ino        # Original firmware template
+├── web/
+│   └── ui.html                 # Web UI for original firmware
+├── tools/
+│   ├── build_web_ui.py         # Build script for original firmware
+│   ├── wled_connect.sh         # Provisions WiFi credentials to WLED via AP
+│   └── wled_provision.py       # Improv Wi-Fi Serial provisioner (fallback)
+├── home_assistant/
+│   ├── automations.yaml        # HA automation to mirror a light to the stick
+│   └── wled_data/
+│       └── cfg.json            # WLED config template (GPIO, LED count, hostname)
+├── rainbow_test/               # Minimal rainbow sketch for hardware testing
+│   ├── rainbow_test.ino
+│   ├── platformio.ini
+│   └── src/main.cpp
+├── build/                      # Generated output (gitignored)
+├── .env                        # WiFi credentials (gitignored)
+├── .env.example
+├── Makefile
+└── README.md
+```
+
+### Make targets
+
+| Target | Description |
+|---|---|
+| `make build` | Build original firmware into `build/hockey_stick.ino` |
+| `make flash` | Flash rainbow test sketch (hardware check) |
+| `make wled-flash` | Flash WLED firmware and provision WiFi |
+| `make wled-provision` | Re-provision WiFi without reflashing |
+| `make deploy-ha HA_TOKEN=...` | Deploy HA automation |
+| `make clean` | Remove build artifacts |
+
+---
+
+Created by [Ryder Calm Down](https://rydercalmdown.com)

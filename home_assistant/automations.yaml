@@ -1,0 +1,21 @@
+- alias: "Hockey stick follows Behind TV"
+  mode: restart
+  trigger:
+    - platform: state
+      entity_id: light.behind_tv
+  action:
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.to_state.state == 'on' }}"
+          sequence:
+            - service: light.turn_on
+              target:
+                entity_id: light.hockey_stick
+              data:
+                brightness: "{{ state_attr('light.behind_tv', 'brightness') | int(255) }}"
+                rgb_color: "{{ state_attr('light.behind_tv', 'rgb_color') | default([255, 255, 255]) }}"
+      default:
+        - service: light.turn_off
+          target:
+            entity_id: light.hockey_stick
